@@ -1,0 +1,99 @@
+name: 'BFFLESS Compare Screenshots'
+description: 'Compare screenshots against a BFFLESS baseline for visual regression testing'
+author: 'BFFLESS'
+
+branding:
+  icon: 'image'
+  color: 'blue'
+
+inputs:
+  # Required
+  path:
+    description: 'Path to local screenshots directory'
+    required: true
+  baseline-alias:
+    description: 'BFFLESS alias containing baseline screenshots'
+    required: true
+  api-url:
+    description: 'BFFLESS API URL'
+    required: true
+  api-key:
+    description: 'BFFLESS API key'
+    required: true
+
+  # Optional - Comparison
+  threshold:
+    description: 'Percentage diff tolerance (0-100). Default: 0.1'
+    required: false
+    default: '0.1'
+  pixel-threshold:
+    description: 'Per-pixel color threshold (0-1). Default: 0.1'
+    required: false
+    default: '0.1'
+  include-anti-aliasing:
+    description: 'Include anti-aliasing differences. Default: false'
+    required: false
+    default: 'false'
+
+  # Optional - Upload
+  upload-results:
+    description: 'Upload PR screenshots and diffs to BFFLESS. Default: true'
+    required: false
+    default: 'true'
+  screenshots-alias:
+    description: 'Alias for uploaded PR screenshots. Default: screenshots-pr-{pr_number}'
+    required: false
+  diffs-alias:
+    description: 'Alias for uploaded diff images. Default: screenshot-diffs-pr-{pr_number}'
+    required: false
+
+  # Optional - Repository context
+  repository:
+    description: 'Repository in owner/repo format. Default: current repository'
+    required: false
+
+  # Optional - Output
+  output-dir:
+    description: 'Directory for diff images. Default: ./screenshot-diffs'
+    required: false
+    default: './screenshot-diffs'
+  fail-on-difference:
+    description: 'Fail the action if differences detected. Default: true'
+    required: false
+    default: 'true'
+  summary:
+    description: 'Generate GitHub step summary. Default: true'
+    required: false
+    default: 'true'
+  summary-images:
+    description: 'Include image links in summary. Options: auto, true, false. Default: auto (detect from API)'
+    required: false
+    default: 'auto'
+
+outputs:
+  total:
+    description: 'Total number of screenshots compared'
+  passed:
+    description: 'Number of screenshots that passed'
+  failed:
+    description: 'Number of screenshots that failed'
+  new:
+    description: 'Number of new screenshots (not in baseline)'
+  missing:
+    description: 'Number of missing screenshots (in baseline but not local)'
+  result:
+    description: 'Overall result: pass, fail, or error'
+  report:
+    description: 'JSON report contents'
+  baseline-commit-sha:
+    description: 'Commit SHA of the baseline screenshots'
+  baseline-is-public:
+    description: 'Whether baseline screenshots are publicly accessible'
+  screenshots-url:
+    description: 'URL to uploaded PR screenshots (if upload-results: true)'
+  diffs-url:
+    description: 'URL to uploaded diff images (if upload-results: true)'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
