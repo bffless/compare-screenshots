@@ -31,8 +31,7 @@ export function getInputs(): ActionInputs {
   // Upload options
   const uploadResultsInput = core.getInput('upload-results') || 'true';
   const uploadResults = uploadResultsInput.toLowerCase() !== 'false';
-  const screenshotsAlias = core.getInput('screenshots-alias') || undefined;
-  const diffsAlias = core.getInput('diffs-alias') || undefined;
+  const alias = core.getInput('alias') || 'preview';
 
   // Repository context
   const context = deriveContext();
@@ -55,6 +54,11 @@ export function getInputs(): ActionInputs {
     summaryImages = 'false';
   }
 
+  // PR Comment options
+  const commentInput = core.getInput('comment') || 'true';
+  const comment = commentInput.toLowerCase() !== 'false';
+  const commentHeader = core.getInput('comment-header') || '## Visual Regression Report';
+
   return {
     path,
     baselineAlias,
@@ -64,12 +68,13 @@ export function getInputs(): ActionInputs {
     pixelThreshold,
     includeAntiAliasing,
     uploadResults,
-    screenshotsAlias,
-    diffsAlias,
+    alias,
     repository,
     outputDir,
     failOnDifference,
     summary,
     summaryImages,
+    comment,
+    commentHeader,
   };
 }

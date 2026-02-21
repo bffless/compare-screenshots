@@ -40,12 +40,10 @@ inputs:
     description: 'Upload PR screenshots and diffs to BFFLESS. Default: true'
     required: false
     default: 'true'
-  screenshots-alias:
-    description: 'Alias for uploaded PR screenshots. Default: screenshots-pr-{pr_number}'
+  alias:
+    description: 'Alias for uploaded results. Default: preview'
     required: false
-  diffs-alias:
-    description: 'Alias for uploaded diff images. Default: screenshot-diffs-pr-{pr_number}'
-    required: false
+    default: 'preview'
 
   # Optional - Repository context
   repository:
@@ -70,6 +68,16 @@ inputs:
     required: false
     default: 'auto'
 
+  # Optional - PR Comment
+  comment:
+    description: 'Post a comment on the PR with results. Default: true'
+    required: false
+    default: 'true'
+  comment-header:
+    description: 'Header text to identify the comment (for updates). Default: ## Visual Regression Report'
+    required: false
+    default: '## Visual Regression Report'
+
 outputs:
   total:
     description: 'Total number of screenshots compared'
@@ -89,10 +97,8 @@ outputs:
     description: 'Commit SHA of the baseline screenshots'
   baseline-is-public:
     description: 'Whether baseline screenshots are publicly accessible'
-  screenshots-url:
-    description: 'URL to uploaded PR screenshots (if upload-results: true)'
-  diffs-url:
-    description: 'URL to uploaded diff images (if upload-results: true)'
+  upload-url:
+    description: 'URL to uploaded results (if upload-results: true)'
 
 runs:
   using: 'node20'

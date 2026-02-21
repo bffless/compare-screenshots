@@ -13,8 +13,7 @@ export interface ActionInputs {
 
   // Upload
   uploadResults: boolean;
-  screenshotsAlias?: string;
-  diffsAlias?: string;
+  alias: string;
 
   // Context
   repository: string;
@@ -24,6 +23,10 @@ export interface ActionInputs {
   failOnDifference: boolean;
   summary: boolean;
   summaryImages: 'auto' | 'true' | 'false';
+
+  // PR Comment
+  comment: boolean;
+  commentHeader: string;
 }
 
 // Git Context
@@ -165,12 +168,10 @@ export interface ActionOutputs {
   report: string;
   baselineCommitSha: string;
   baselineIsPublic: boolean;
-  screenshotsUrl?: string;
-  diffsUrl?: string;
+  uploadUrl?: string;
 }
 
 // Upload Result
 export interface UploadResult {
-  screenshotsUrl?: string;
-  diffsUrl?: string;
+  uploadUrl?: string;
 }

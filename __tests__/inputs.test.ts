@@ -64,10 +64,13 @@ describe('getInputs', () => {
     expect(inputs.pixelThreshold).toBe(0.1);
     expect(inputs.includeAntiAliasing).toBe(false);
     expect(inputs.uploadResults).toBe(true);
+    expect(inputs.alias).toBe('preview');
     expect(inputs.outputDir).toBe('./screenshot-diffs');
     expect(inputs.failOnDifference).toBe(true);
     expect(inputs.summary).toBe(true);
     expect(inputs.summaryImages).toBe('auto');
+    expect(inputs.comment).toBe(true);
+    expect(inputs.commentHeader).toBe('## Visual Regression Report');
   });
 
   it('should parse custom threshold values', () => {
@@ -188,5 +191,25 @@ describe('getInputs', () => {
     const inputs = getInputs();
 
     expect(inputs.repository).toBe('test-owner/test-repo');
+  });
+
+  it('should parse comment inputs correctly', () => {
+    const mockGetInput = vi.mocked(core.getInput);
+    mockGetInput.mockImplementation((name: string) => {
+      const inputs: Record<string, string> = {
+        path: './screenshots',
+        'baseline-alias': 'production',
+        'api-url': 'https://api.example.com',
+        'api-key': 'secret',
+        comment: 'false',
+        'comment-header': '## Custom VRT Header',
+      };
+      return inputs[name] || '';
+    });
+
+    const inputs = getInputs();
+
+    expect(inputs.comment).toBe(false);
+    expect(inputs.commentHeader).toBe('## Custom VRT Header');
   });
 });
