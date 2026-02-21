@@ -131,5 +131,16 @@ export async function generateSummary(
     md += `- [View Results](${uploadResult.uploadUrl})\n`;
   }
 
+  // Footer
+  md += '---\n\n';
+  md += '<table><tr>\n';
+  md += '<td width="96"><img src="https://bffless.app/images/logo-circle.svg" width="96" height="96" /></td>\n';
+  md += '<td valign="top">\n';
+  md += '<strong><a href="https://bffless.app">BFFless</a></strong><br/>\n';
+  md += 'The BFF your frontend deserves<br/>\n';
+  md += '<a href="https://github.com/bffless/compare-screenshots">bffless/compare-screenshots</a>\n';
+  md += '</td>\n';
+  md += '</tr></table>\n';
+
   await core.summary.addRaw(md).write();
 }
