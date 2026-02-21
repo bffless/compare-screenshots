@@ -8,7 +8,11 @@ import {
   UploadResponse,
 } from './types';
 import { walkDirectory, validateDirectory } from './files';
-import { requestPrepareBatchUpload, uploadFilesWithPresignedUrls, finalizeUpload } from './api';
+import {
+  requestPrepareBatchUpload,
+  uploadFilesWithPresignedUrls,
+  finalizeUpload,
+} from '@bffless/artifact-client';
 
 /**
  * Upload PR screenshots and diff images to BFFLESS as a single deployment

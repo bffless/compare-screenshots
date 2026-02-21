@@ -1,4 +1,4 @@
-import { FileInfo } from './types';
+import { FileInfo } from '@bffless/artifact-client';
 /**
  * Recursively walk a directory and collect all files
  * Skips hidden files and system files

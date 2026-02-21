@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as mimeTypes from 'mime-types';
-import { FileInfo } from './types';
+import { FileInfo } from '@bffless/artifact-client';
 
 /**
  * Recursively walk a directory and collect all files

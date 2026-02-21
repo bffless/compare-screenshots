@@ -7,7 +7,7 @@ import {
   requestPrepareBatchDownload,
   downloadFilesWithPresignedUrls,
   downloadFilesDirect,
-} from './api';
+} from '@bffless/artifact-client';
 
 /**
  * Download baseline screenshots from BFFLESS
