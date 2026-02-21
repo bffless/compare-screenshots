@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/bffless/compare-screenshots/compare/v1.1.0...v1.1.1) (2026-02-21)
+
+
+### Bug Fixes
+
+* cleanup comment ([2e85818](https://github.com/bffless/compare-screenshots/commit/2e85818580508e519e7131c5ef16ff425e3a7562))
+
 ## [1.1.0](https://github.com/bffless/compare-screenshots/compare/v1.0.0...v1.1.0) (2026-02-21)
 
 
