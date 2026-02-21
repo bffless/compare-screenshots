@@ -6,6 +6,7 @@ import { downloadBaseline } from './download';
 import { compareScreenshots } from './compare';
 import { uploadResults } from './upload';
 import { generateSummary } from './summary';
+import { postPRComment } from './comment';
 import { writeReport } from './report';
 import { ActionOutputs, UploadResult } from './types';
 
@@ -85,15 +86,19 @@ async function run(): Promise<void> {
     core.setOutput('report', outputs.report);
     core.setOutput('baseline-commit-sha', outputs.baselineCommitSha);
     core.setOutput('baseline-is-public', outputs.baselineIsPublic);
-    if (outputs.screenshotsUrl) core.setOutput('screenshots-url', outputs.screenshotsUrl);
-    if (outputs.diffsUrl) core.setOutput('diffs-url', outputs.diffsUrl);
+    if (outputs.uploadUrl) core.setOutput('upload-url', outputs.uploadUrl);
 
     // 8. Generate summary
     if (inputs.summary) {
       await generateSummary(report, inputs, context, uploadedUrls);
     }
 
-    // 9. Fail if differences detected and configured to fail
+    // 9. Post PR comment
+    if (inputs.comment) {
+      await postPRComment(report, inputs, context, uploadedUrls);
+    }
+
+    // 10. Fail if differences detected and configured to fail
     if (inputs.failOnDifference && outputs.result === 'fail') {
       core.setFailed(
         `Visual regression detected: ${report.summary.failed} failed, ${report.summary.missing} missing`

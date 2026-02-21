@@ -125,15 +125,10 @@ export async function generateSummary(
     }
   }
 
-  // Upload URLs
-  if (uploadResult.screenshotsUrl || uploadResult.diffsUrl) {
+  // Upload URL
+  if (uploadResult.uploadUrl) {
     md += '\n### Uploaded Results\n\n';
-    if (uploadResult.screenshotsUrl) {
-      md += `- [PR Screenshots](${uploadResult.screenshotsUrl})\n`;
-    }
-    if (uploadResult.diffsUrl) {
-      md += `- [Diff Images](${uploadResult.diffsUrl})\n`;
-    }
+    md += `- [View Results](${uploadResult.uploadUrl})\n`;
   }
 
   await core.summary.addRaw(md).write();

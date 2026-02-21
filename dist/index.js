@@ -33481,6 +33481,197 @@ async function postJson(url, body, apiKey) {
 
 /***/ }),
 
+/***/ 8919:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.postPRComment = postPRComment;
+const core = __importStar(__nccwpck_require__(6966));
+const github = __importStar(__nccwpck_require__(4903));
+/**
+ * Post or update a PR comment with the visual regression report
+ */
+async function postPRComment(report, inputs, context, uploadResult) {
+    // Check if we're in a PR context
+    if (!context.prNumber) {
+        core.info('Not in a PR context, skipping PR comment');
+        return;
+    }
+    // Get GitHub token from environment
+    const token = process.env.GITHUB_TOKEN;
+    if (!token) {
+        core.warning('GITHUB_TOKEN not available, skipping PR comment');
+        return;
+    }
+    const octokit = github.getOctokit(token);
+    const { summary, results } = report;
+    // Determine if we should show images
+    const showImages = inputs.summaryImages === 'true' || (inputs.summaryImages === 'auto' && report.baselineIsPublic);
+    // Build the comment body
+    let body = `${inputs.commentHeader}\n\n`;
+    // Summary line
+    const passed = summary.passed;
+    const total = summary.total;
+    const failed = summary.failed;
+    const newScreenshots = summary.new;
+    const missing = summary.missing;
+    if (failed === 0 && missing === 0 && newScreenshots === 0) {
+        body += `✅ **${passed}/${total}** screenshots passed\n\n`;
+    }
+    else if (failed === 0 && missing === 0 && newScreenshots > 0) {
+        if (passed > 0) {
+            body += `✅ **${passed}/${total - newScreenshots}** screenshots passed | ${newScreenshots} new\n\n`;
+        }
+        else {
+            body += `🆕 **${newScreenshots}** new screenshots (no baseline to compare)\n\n`;
+        }
+    }
+    else {
+        body += `❌ **${passed}/${total - newScreenshots}** screenshots passed`;
+        if (failed > 0)
+            body += ` | ${failed} failed`;
+        if (missing > 0)
+            body += ` | ${missing} missing`;
+        if (newScreenshots > 0)
+            body += ` | ${newScreenshots} new`;
+        body += '\n\n';
+    }
+    // Build results table
+    body += '| Screenshot | Status | Diff % |\n';
+    body += '|------------|--------|--------|\n';
+    for (const result of results) {
+        const statusEmoji = result.status === 'pass'
+            ? '✅'
+            : result.status === 'fail'
+                ? '❌'
+                : result.status === 'new'
+                    ? '🆕'
+                    : '⚠️';
+        const diffPct = result.diffPercentage !== undefined ? `${result.diffPercentage.toFixed(3)}%` : '-';
+        body += `| ${result.name} | ${statusEmoji} ${result.status} | ${diffPct} |\n`;
+    }
+    // Add collapsible sections for failures with side-by-side comparison
+    const failures = results.filter((r) => r.status === 'fail');
+    if (failures.length > 0) {
+        body += '\n### Failed Screenshots\n\n';
+        const apiUrl = inputs.apiUrl.replace(/\/$/, '');
+        const [owner, repo] = context.repository.split('/');
+        const screenshotsPath = inputs.path.replace(/^\.\//, '').replace(/\/$/, '');
+        const diffsPath = inputs.outputDir.replace(/^\.\//, '').replace(/\/$/, '');
+        if (showImages) {
+            // Public: embed images directly using commit SHA URLs (stable links)
+            for (const failure of failures) {
+                const prodUrl = `${apiUrl}/public/${owner}/${repo}/commits/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`;
+                const prUrl = `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${screenshotsPath}/${failure.name}`;
+                const diffUrl = `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${diffsPath}/diff-${failure.name}`;
+                body += `<details>\n`;
+                body += `<summary>❌ ${failure.name} (${failure.diffPercentage?.toFixed(3)}% diff)</summary>\n\n`;
+                body += `| Production | PR | Diff |\n`;
+                body += `|------------|-----|------|\n`;
+                body += `| ![prod](${prodUrl}) | ![pr](${prUrl}) | ![diff](${diffUrl}) |\n\n`;
+                body += `</details>\n\n`;
+            }
+        }
+        else {
+            // Private: show links instead of embedded images
+            body += '| Screenshot | Diff % | Links |\n';
+            body += '|------------|--------|-------|\n';
+            for (const failure of failures) {
+                const prodUrl = `${apiUrl}/repo/${owner}/${repo}/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`;
+                const prUrl = `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${screenshotsPath}/${failure.name}`;
+                const diffUrl = `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${diffsPath}/diff-${failure.name}`;
+                body += `| ${failure.name} | ${failure.diffPercentage?.toFixed(3)}% | [baseline](${prodUrl}) · [current](${prUrl}) · [diff](${diffUrl}) |\n`;
+            }
+            body += '\n> 🔒 Images require login to view\n';
+        }
+    }
+    // New screenshots section
+    const newResults = results.filter((r) => r.status === 'new');
+    if (newResults.length > 0) {
+        body += '\n### New Screenshots\n\n';
+        body += 'These screenshots have no baseline to compare against:\n\n';
+        for (const newImg of newResults) {
+            body += `- \`${newImg.name}\`\n`;
+        }
+    }
+    // Missing screenshots section
+    const missingResults = results.filter((r) => r.status === 'missing');
+    if (missingResults.length > 0) {
+        body += '\n### Missing Screenshots\n\n';
+        body += 'These screenshots exist in baseline but not in the current run:\n\n';
+        for (const missingImg of missingResults) {
+            body += `- \`${missingImg.name}\`\n`;
+        }
+    }
+    body += '\n---\n_Generated by [BFFLESS Compare Screenshots](https://github.com/bffless/compare-screenshots)_';
+    // Find existing comment by header
+    const [owner, repo] = context.repository.split('/');
+    const { data: comments } = await octokit.rest.issues.listComments({
+        owner,
+        repo,
+        issue_number: context.prNumber,
+    });
+    const botComment = comments.find((comment) => comment.user?.type === 'Bot' && comment.body?.includes(inputs.commentHeader));
+    if (botComment) {
+        // Update existing comment
+        await octokit.rest.issues.updateComment({
+            owner,
+            repo,
+            comment_id: botComment.id,
+            body,
+        });
+        core.info(`Updated existing PR comment (ID: ${botComment.id})`);
+    }
+    else {
+        // Create new comment
+        const { data: newComment } = await octokit.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: context.prNumber,
+            body,
+        });
+        core.info(`Created new PR comment (ID: ${newComment.id})`);
+    }
+}
+
+
+/***/ }),
+
 /***/ 4869:
 /***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
 
@@ -33978,6 +34169,7 @@ const download_1 = __nccwpck_require__(5856);
 const compare_1 = __nccwpck_require__(4869);
 const upload_1 = __nccwpck_require__(1773);
 const summary_1 = __nccwpck_require__(6330);
+const comment_1 = __nccwpck_require__(8919);
 const report_1 = __nccwpck_require__(1762);
 async function run() {
     let baselineDir;
@@ -34046,15 +34238,17 @@ async function run() {
         core.setOutput('report', outputs.report);
         core.setOutput('baseline-commit-sha', outputs.baselineCommitSha);
         core.setOutput('baseline-is-public', outputs.baselineIsPublic);
-        if (outputs.screenshotsUrl)
-            core.setOutput('screenshots-url', outputs.screenshotsUrl);
-        if (outputs.diffsUrl)
-            core.setOutput('diffs-url', outputs.diffsUrl);
+        if (outputs.uploadUrl)
+            core.setOutput('upload-url', outputs.uploadUrl);
         // 8. Generate summary
         if (inputs.summary) {
             await (0, summary_1.generateSummary)(report, inputs, context, uploadedUrls);
         }
-        // 9. Fail if differences detected and configured to fail
+        // 9. Post PR comment
+        if (inputs.comment) {
+            await (0, comment_1.postPRComment)(report, inputs, context, uploadedUrls);
+        }
+        // 10. Fail if differences detected and configured to fail
         if (inputs.failOnDifference && outputs.result === 'fail') {
             core.setFailed(`Visual regression detected: ${report.summary.failed} failed, ${report.summary.missing} missing`);
         }
@@ -34148,8 +34342,7 @@ function getInputs() {
     // Upload options
     const uploadResultsInput = core.getInput('upload-results') || 'true';
     const uploadResults = uploadResultsInput.toLowerCase() !== 'false';
-    const screenshotsAlias = core.getInput('screenshots-alias') || undefined;
-    const diffsAlias = core.getInput('diffs-alias') || undefined;
+    const alias = core.getInput('alias') || 'preview';
     // Repository context
     const context = (0, context_1.deriveContext)();
     const repository = core.getInput('repository') || context.repository;
@@ -34167,6 +34360,10 @@ function getInputs() {
     else if (summaryImagesInput === 'false') {
         summaryImages = 'false';
     }
+    // PR Comment options
+    const commentInput = core.getInput('comment') || 'true';
+    const comment = commentInput.toLowerCase() !== 'false';
+    const commentHeader = core.getInput('comment-header') || '## Visual Regression Report';
     return {
         path,
         baselineAlias,
@@ -34176,13 +34373,14 @@ function getInputs() {
         pixelThreshold,
         includeAntiAliasing,
         uploadResults,
-        screenshotsAlias,
-        diffsAlias,
+        alias,
         repository,
         outputDir,
         failOnDifference,
         summary,
         summaryImages,
+        comment,
+        commentHeader,
     };
 }
 
@@ -34392,15 +34590,10 @@ async function generateSummary(report, inputs, context, uploadResult) {
             md += `- \`${missing.name}\`\n`;
         }
     }
-    // Upload URLs
-    if (uploadResult.screenshotsUrl || uploadResult.diffsUrl) {
+    // Upload URL
+    if (uploadResult.uploadUrl) {
         md += '\n### Uploaded Results\n\n';
-        if (uploadResult.screenshotsUrl) {
-            md += `- [PR Screenshots](${uploadResult.screenshotsUrl})\n`;
-        }
-        if (uploadResult.diffsUrl) {
-            md += `- [Diff Images](${uploadResult.diffsUrl})\n`;
-        }
+        md += `- [View Results](${uploadResult.uploadUrl})\n`;
     }
     await core.summary.addRaw(md).write();
 }
@@ -34453,123 +34646,104 @@ const path = __importStar(__nccwpck_require__(6928));
 const files_1 = __nccwpck_require__(5713);
 const api_1 = __nccwpck_require__(7822);
 /**
- * Upload PR screenshots and diff images to BFFLESS
+ * Upload PR screenshots and diff images to BFFLESS as a single deployment
  */
 async function uploadResults(inputs, context, report) {
     const result = {};
-    // Determine aliases - substitute PR number if present
-    const prSuffix = context.prNumber
-        ? `pr-${context.prNumber}`
-        : `sha-${context.commitSha.slice(0, 7)}`;
-    const screenshotsAlias = inputs.screenshotsAlias || `screenshots-${prSuffix}`;
-    const diffsAlias = inputs.diffsAlias || `screenshot-diffs-${prSuffix}`;
-    // Upload PR screenshots (current)
+    // Collect all files to upload (screenshots + diffs)
+    const allFiles = [];
+    // Add screenshots
     const screenshotsDir = path.resolve(inputs.path);
-    const screenshotsPath = inputs.path.replace(/^\.\//, '').replace(/\/$/, '');
+    const screenshotsBasePath = inputs.path.replace(/^\.\//, '').replace(/\/$/, '');
     try {
-        core.info(`Uploading PR screenshots from: ${screenshotsDir}`);
-        const screenshotsResponse = await uploadDirectory(screenshotsDir, screenshotsPath, screenshotsAlias, inputs, context);
-        if (screenshotsResponse) {
-            result.screenshotsUrl = screenshotsResponse.urls.sha || screenshotsResponse.urls.alias;
-            core.info(`PR screenshots uploaded: ${result.screenshotsUrl}`);
-        }
+        const resolvedScreenshotsPath = (0, files_1.validateDirectory)(screenshotsDir);
+        const screenshotFiles = await (0, files_1.walkDirectory)(resolvedScreenshotsPath, screenshotsBasePath);
+        allFiles.push(...screenshotFiles);
+        core.info(`Found ${screenshotFiles.length} screenshot files`);
     }
-    catch (error) {
-        core.warning(`Failed to upload PR screenshots: ${error instanceof Error ? error.message : String(error)}`);
+    catch {
+        core.warning(`Screenshots directory not found or empty: ${screenshotsDir}`);
     }
-    // Upload diff images (only if there are failures)
+    // Add diff images (only if there are failures)
     const hasDiffs = report.results.some((r) => r.status === 'fail' && r.diffPath);
     if (hasDiffs) {
         const diffsDir = path.resolve(inputs.outputDir);
-        const diffsPath = inputs.outputDir.replace(/^\.\//, '').replace(/\/$/, '');
+        const diffsBasePath = inputs.outputDir.replace(/^\.\//, '').replace(/\/$/, '');
         try {
-            core.info(`Uploading diff images from: ${diffsDir}`);
-            const diffsResponse = await uploadDirectory(diffsDir, diffsPath, diffsAlias, inputs, context);
-            if (diffsResponse) {
-                result.diffsUrl = diffsResponse.urls.sha || diffsResponse.urls.alias;
-                core.info(`Diff images uploaded: ${result.diffsUrl}`);
+            const resolvedDiffsPath = (0, files_1.validateDirectory)(diffsDir);
+            const diffFiles = await (0, files_1.walkDirectory)(resolvedDiffsPath, diffsBasePath);
+            allFiles.push(...diffFiles);
+            core.info(`Found ${diffFiles.length} diff files`);
+        }
+        catch {
+            core.warning(`Diffs directory not found or empty: ${diffsDir}`);
+        }
+    }
+    if (allFiles.length === 0) {
+        core.warning('No files to upload');
+        return result;
+    }
+    core.info(`Uploading ${allFiles.length} total files to alias: ${inputs.alias}`);
+    try {
+        // Request presigned URLs for all files
+        const prepareResponse = await (0, api_1.requestPrepareBatchUpload)(inputs.apiUrl, inputs.apiKey, {
+            repository: inputs.repository,
+            commitSha: context.commitSha,
+            branch: context.branch,
+            alias: inputs.alias,
+            description: `Visual regression test results for ${context.prNumber ? `PR #${context.prNumber}` : context.commitSha.slice(0, 7)}`,
+            files: allFiles.map((f) => ({
+                path: f.relativePath,
+                size: f.size,
+                contentType: f.contentType,
+            })),
+        });
+        // Check if presigned URLs are supported
+        if (!prepareResponse.presignedUrlsSupported) {
+            core.warning('Storage does not support presigned URLs for upload');
+            return result;
+        }
+        if (!prepareResponse.files || !prepareResponse.uploadToken) {
+            throw new Error('Invalid response from prepare-batch-upload');
+        }
+        core.info(`Received ${prepareResponse.files.length} presigned URLs (expires: ${prepareResponse.expiresAt})`);
+        // Create lookup map for presigned URLs
+        const urlMap = new Map(prepareResponse.files.map((f) => [f.path, f.presignedUrl]));
+        // Match files with presigned URLs
+        const filesToUpload = allFiles.map((file) => {
+            const presignedUrl = urlMap.get(file.relativePath);
+            if (!presignedUrl) {
+                throw new Error(`No presigned URL for file: ${file.relativePath}`);
+            }
+            return { file, presignedUrl };
+        });
+        // Upload files in parallel
+        core.info('Uploading files directly to storage...');
+        const uploadResults = await (0, api_1.uploadFilesWithPresignedUrls)(filesToUpload, 10, 3);
+        if (uploadResults.failed.length > 0) {
+            core.warning(`${uploadResults.failed.length} files failed to upload:\n` +
+                uploadResults.failed
+                    .slice(0, 10)
+                    .map((f) => `  - ${f.path}: ${f.error}`)
+                    .join('\n'));
+            if (uploadResults.failed.length > uploadResults.success.length) {
+                throw new Error(`Too many upload failures: ${uploadResults.failed.length}/${allFiles.length}`);
             }
         }
-        catch (error) {
-            core.warning(`Failed to upload diff images: ${error instanceof Error ? error.message : String(error)}`);
-        }
+        core.info(`Successfully uploaded ${uploadResults.success.length} files`);
+        // Finalize upload
+        const response = await (0, api_1.finalizeUpload)(inputs.apiUrl, inputs.apiKey, {
+            uploadToken: prepareResponse.uploadToken,
+        });
+        core.info('Upload finalized successfully');
+        core.info(`Deployment ID: ${response.deploymentId}`);
+        result.uploadUrl = response.urls.sha || response.urls.alias;
+        core.info(`Results uploaded: ${result.uploadUrl}`);
+    }
+    catch (error) {
+        core.warning(`Failed to upload results: ${error instanceof Error ? error.message : String(error)}`);
     }
     return result;
-}
-/**
- * Upload a directory to BFFLESS using presigned URLs
- */
-async function uploadDirectory(dirPath, basePath, alias, inputs, context) {
-    // Validate directory
-    let resolvedPath;
-    try {
-        resolvedPath = (0, files_1.validateDirectory)(dirPath);
-    }
-    catch {
-        core.warning(`Directory not found or empty: ${dirPath}`);
-        return null;
-    }
-    // Walk directory and collect files
-    const files = await (0, files_1.walkDirectory)(resolvedPath, basePath);
-    if (files.length === 0) {
-        core.warning(`No files found in: ${dirPath}`);
-        return null;
-    }
-    core.info(`Found ${files.length} files to upload`);
-    // Request presigned URLs
-    const prepareResponse = await (0, api_1.requestPrepareBatchUpload)(inputs.apiUrl, inputs.apiKey, {
-        repository: inputs.repository,
-        commitSha: context.commitSha,
-        branch: context.branch,
-        alias,
-        basePath,
-        description: `Visual regression test results for ${context.prNumber ? `PR #${context.prNumber}` : context.commitSha.slice(0, 7)}`,
-        files: files.map((f) => ({
-            path: f.relativePath,
-            size: f.size,
-            contentType: f.contentType,
-        })),
-    });
-    // Check if presigned URLs are supported
-    if (!prepareResponse.presignedUrlsSupported) {
-        core.warning('Storage does not support presigned URLs for upload');
-        return null;
-    }
-    if (!prepareResponse.files || !prepareResponse.uploadToken) {
-        throw new Error('Invalid response from prepare-batch-upload');
-    }
-    core.info(`Received ${prepareResponse.files.length} presigned URLs (expires: ${prepareResponse.expiresAt})`);
-    // Create lookup map for presigned URLs
-    const urlMap = new Map(prepareResponse.files.map((f) => [f.path, f.presignedUrl]));
-    // Match files with presigned URLs
-    const filesToUpload = files.map((file) => {
-        const presignedUrl = urlMap.get(file.relativePath);
-        if (!presignedUrl) {
-            throw new Error(`No presigned URL for file: ${file.relativePath}`);
-        }
-        return { file, presignedUrl };
-    });
-    // Upload files in parallel
-    core.info('Uploading files directly to storage...');
-    const uploadResults = await (0, api_1.uploadFilesWithPresignedUrls)(filesToUpload, 10, 3);
-    if (uploadResults.failed.length > 0) {
-        core.warning(`${uploadResults.failed.length} files failed to upload:\n` +
-            uploadResults.failed
-                .slice(0, 10)
-                .map((f) => `  - ${f.path}: ${f.error}`)
-                .join('\n'));
-        if (uploadResults.failed.length > uploadResults.success.length) {
-            throw new Error(`Too many upload failures: ${uploadResults.failed.length}/${files.length}`);
-        }
-    }
-    core.info(`Successfully uploaded ${uploadResults.success.length} files`);
-    // Finalize upload
-    const response = await (0, api_1.finalizeUpload)(inputs.apiUrl, inputs.apiKey, {
-        uploadToken: prepareResponse.uploadToken,
-    });
-    core.info('Upload finalized successfully');
-    core.info(`Deployment ID: ${response.deploymentId}`);
-    return response;
 }
 
 

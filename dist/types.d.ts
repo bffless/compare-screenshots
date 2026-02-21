@@ -7,13 +7,14 @@ export interface ActionInputs {
     pixelThreshold: number;
     includeAntiAliasing: boolean;
     uploadResults: boolean;
-    screenshotsAlias?: string;
-    diffsAlias?: string;
+    alias: string;
     repository: string;
     outputDir: string;
     failOnDifference: boolean;
     summary: boolean;
     summaryImages: 'auto' | 'true' | 'false';
+    comment: boolean;
+    commentHeader: string;
 }
 export interface GitContext {
     repository: string;
@@ -133,10 +134,8 @@ export interface ActionOutputs {
     report: string;
     baselineCommitSha: string;
     baselineIsPublic: boolean;
-    screenshotsUrl?: string;
-    diffsUrl?: string;
+    uploadUrl?: string;
 }
 export interface UploadResult {
-    screenshotsUrl?: string;
-    diffsUrl?: string;
+    uploadUrl?: string;
 }
