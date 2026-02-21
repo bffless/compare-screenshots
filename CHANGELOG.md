@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/bffless/compare-screenshots/compare/v1.0.0...v1.1.0) (2026-02-21)
+
+
+### Features
+
+* adds comment functionality ([670af29](https://github.com/bffless/compare-screenshots/commit/670af29495d4bff7971bdfb73fa0c7375f4274a8))
+
 ## 1.0.0 (2026-02-21)
 
 
