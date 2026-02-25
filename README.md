@@ -185,6 +185,52 @@ jobs:
 4. **Upload Results**: Uploads PR screenshots and diff images to BFFLESS (optional)
 5. **Report**: Generates a JSON report and GitHub step summary
 
+## PR Comment Example
+
+The action can post a comment like this on pull requests:
+
+![Visual Regression Report Comment](assets/vrt-comment.png)
+
+<details>
+<summary>Comment Markdown</summary>
+
+```markdown
+## Visual Regression Report
+
+> [!WARNING]
+> **0/4** screenshots passed · **4** failed
+
+<table>
+<tr><td><strong>Baseline</strong></td><td><code>production</code> @ <code>5d1a4e2</code></td></tr>
+<tr><td><strong>Current</strong></td><td><code>d4856e2</code></td></tr>
+<tr><td><strong>Threshold</strong></td><td>0.1%</td></tr>
+</table>
+
+### Results
+
+| Screenshot         | Status |   Diff |
+| :----------------- | :----: | -----: |
+| `home-counter.png` |   ❌   | 0.507% |
+| `home-default.png` |   ❌   | 0.506% |
+| `home-error.png`   |   ❌   | 0.506% |
+| `home-loading.png` |   ❌   | 0.506% |
+
+---
+
+### Failed Screenshots
+
+<details>
+<summary><strong>home-counter.png</strong> — 0.507% diff</summary>
+
+|                                Baseline                                 |                                Current                                 |                                   Diff                                    |
+| :---------------------------------------------------------------------: | :--------------------------------------------------------------------: | :-----------------------------------------------------------------------: |
+| <img src="https://example.com/baseline/home-counter.png" width="250" /> | <img src="https://example.com/current/home-counter.png" width="250" /> | <img src="https://example.com/diffs/diff-home-counter.png" width="250" /> |
+
+</details>
+```
+
+</details>
+
 ## Summary Output
 
 The action generates a GitHub step summary with:
@@ -206,4 +252,4 @@ The `summary-images` input controls how images are displayed:
 
 ## License
 
-MIT
+[O'Saasy License](LICENSE.md)
