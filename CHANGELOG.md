@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/bffless/compare-screenshots/compare/v1.3.0...v1.3.1) (2026-05-30)
+
+
+### Bug Fixes
+
+* restore stripped path prefix on baseline downloads ([b8961e4](https://github.com/bffless/compare-screenshots/commit/b8961e4aac7fdc44d7b9e938a4d45a06c1c89524))
+
 ## [1.3.0](https://github.com/bffless/compare-screenshots/compare/v1.2.0...v1.3.0) (2026-05-30)
 
 
