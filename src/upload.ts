@@ -1,5 +1,12 @@
 import * as core from '@actions/core';
+import * as fs from 'fs';
+import * as http from 'http';
+import * as https from 'https';
+import * as os from 'os';
 import * as path from 'path';
+import { URL } from 'url';
+import archiver from 'archiver';
+import FormData from 'form-data';
 import {
   ActionInputs,
   ComparisonReport,
@@ -12,6 +19,7 @@ import {
   requestPrepareBatchUpload,
   uploadFilesWithPresignedUrls,
   finalizeUpload,
+  FileInfo,
 } from '@bffless/artifact-client';
 
 /**
@@ -25,7 +33,7 @@ export async function uploadResults(
   const result: UploadResult = {};
 
   // Collect all files to upload (screenshots + diffs)
-  const allFiles: Array<{ absolutePath: string; relativePath: string; size: number; contentType: string }> = [];
+  const allFiles: FileInfo[] = [];
 
   // Add screenshots
   const screenshotsDir = path.resolve(inputs.path);
@@ -71,7 +79,7 @@ export async function uploadResults(
       commitSha: context.commitSha,
       branch: context.branch,
       alias: inputs.alias,
-      description: `Visual regression test results for ${context.prNumber ? `PR #${context.prNumber}` : context.commitSha.slice(0, 7)}`,
+      description: buildDescription(context),
       files: allFiles.map((f) => ({
         path: f.relativePath,
         size: f.size,
@@ -79,9 +87,12 @@ export async function uploadResults(
       })),
     });
 
-    // Check if presigned URLs are supported
+    // Fall back to ZIP upload when presigned URLs are not supported
     if (!prepareResponse.presignedUrlsSupported) {
-      core.warning('Storage does not support presigned URLs for upload');
+      core.info('Storage does not support presigned URLs, falling back to ZIP upload');
+      const response = await uploadAsZip(inputs, context, allFiles);
+      result.uploadUrl = response.urls.sha || response.urls.alias;
+      core.info(`Results uploaded (zip): ${result.uploadUrl}`);
       return result;
     }
 
@@ -142,4 +153,101 @@ export async function uploadResults(
   }
 
   return result;
+}
+
+function buildDescription(context: GitContext): string {
+  const label = context.prNumber ? `PR #${context.prNumber}` : context.commitSha.slice(0, 7);
+  return `Visual regression test results for ${label}`;
+}
+
+/**
+ * Fallback path when the storage backend doesn't issue presigned URLs:
+ * zip the collected files (preserving their relative paths as zip entry names)
+ * and POST the archive to /api/deployments/zip, the same endpoint used by
+ * bffless/upload-artifact in its ZIP fallback.
+ */
+async function uploadAsZip(
+  inputs: ActionInputs,
+  context: GitContext,
+  allFiles: FileInfo[]
+): Promise<UploadResponse> {
+  const zipPath = path.join(os.tmpdir(), `vrt-upload-${Date.now()}.zip`);
+
+  await new Promise<void>((resolve, reject) => {
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 6 } });
+    output.on('close', () => resolve());
+    archive.on('error', (err) => reject(err));
+    archive.pipe(output);
+    for (const f of allFiles) {
+      archive.file(f.absolutePath, { name: f.relativePath });
+    }
+    archive.finalize();
+  });
+
+  try {
+    const form = new FormData();
+    form.append('file', fs.createReadStream(zipPath), {
+      filename: path.basename(zipPath),
+      contentType: 'application/zip',
+    });
+    form.append('repository', inputs.repository);
+    form.append('commitSha', context.commitSha);
+    if (context.branch) form.append('branch', context.branch);
+    form.append('alias', inputs.alias);
+    form.append('description', buildDescription(context));
+
+    const url = new URL('/api/deployments/zip', inputs.apiUrl);
+    return await postFormData(url, form, inputs.apiKey);
+  } finally {
+    try {
+      fs.unlinkSync(zipPath);
+    } catch {
+      /* best effort */
+    }
+  }
+}
+
+function postFormData(url: URL, form: FormData, apiKey: string): Promise<UploadResponse> {
+  return new Promise((resolve, reject) => {
+    const transport = url.protocol === 'https:' ? https : http;
+
+    const req = transport.request(
+      url,
+      {
+        method: 'POST',
+        headers: {
+          ...form.getHeaders(),
+          'X-API-Key': apiKey,
+        },
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => {
+          const body = Buffer.concat(chunks).toString('utf-8');
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            try {
+              resolve(JSON.parse(body) as UploadResponse);
+            } catch (err) {
+              reject(
+                new Error(
+                  `Failed to parse zip upload response (HTTP ${res.statusCode}): ${body.substring(0, 200)}`
+                )
+              );
+            }
+          } else {
+            reject(
+              new Error(
+                `ZIP upload failed: HTTP ${res.statusCode} - ${body.substring(0, 200)}`
+              )
+            );
+          }
+        });
+      }
+    );
+
+    req.on('error', (err) => reject(err));
+    form.pipe(req);
+  });
 }
