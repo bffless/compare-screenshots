@@ -26,8 +26,16 @@ export async function compareScreenshots(
 
   // Get baseline screenshots - they're stored with their relative paths
   // e.g., "screenshots/home.png" -> we want just "home.png"
+  // When baseline-path is set, only consider files under that subpath, so
+  // unrelated PNGs elsewhere in the alias don't pollute the baseline set.
+  const baselinePrefix = inputs.baselinePath
+    ? inputs.baselinePath.replace(/^\.?\/+/, '').replace(/\/+$/, '') + '/'
+    : undefined;
   const baselineScreenshots = new Map<string, string>();
   for (const file of baseline.files) {
+    const normalized = file.replace(/\\/g, '/');
+    if (baselinePrefix && !normalized.startsWith(baselinePrefix)) continue;
+    if (!normalized.toLowerCase().endsWith('.png')) continue;
     const filename = path.basename(file);
     baselineScreenshots.set(filename, path.join(baseline.outputDir, file));
   }

@@ -33899,8 +33899,18 @@ async function compareScreenshots(inputs, baseline, context) {
     const localScreenshots = new Set(getScreenshots(localDir));
     // Get baseline screenshots - they're stored with their relative paths
     // e.g., "screenshots/home.png" -> we want just "home.png"
+    // When baseline-path is set, only consider files under that subpath, so
+    // unrelated PNGs elsewhere in the alias don't pollute the baseline set.
+    const baselinePrefix = inputs.baselinePath
+        ? inputs.baselinePath.replace(/^\.?\/+/, '').replace(/\/+$/, '') + '/'
+        : undefined;
     const baselineScreenshots = new Map();
     for (const file of baseline.files) {
+        const normalized = file.replace(/\\/g, '/');
+        if (baselinePrefix && !normalized.startsWith(baselinePrefix))
+            continue;
+        if (!normalized.toLowerCase().endsWith('.png'))
+            continue;
         const filename = path.basename(file);
         baselineScreenshots.set(filename, path.join(baseline.outputDir, file));
     }
@@ -34496,6 +34506,9 @@ function getInputs() {
     const apiUrl = core.getInput('api-url', { required: true });
     const apiKey = core.getInput('api-key', { required: true });
     core.setSecret(apiKey);
+    // Optional baseline-path: subpath within the alias to limit baseline screenshots to
+    const baselinePathInput = core.getInput('baseline-path');
+    const baselinePath = baselinePathInput ? baselinePathInput.trim() : undefined;
     // Comparison options
     const thresholdInput = core.getInput('threshold') || '0.1';
     const threshold = parseFloat(thresholdInput);
@@ -34539,6 +34552,7 @@ function getInputs() {
         baselineAlias,
         apiUrl,
         apiKey,
+        baselinePath,
         threshold,
         pixelThreshold,
         includeAntiAliasing,

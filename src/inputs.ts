@@ -10,6 +10,10 @@ export function getInputs(): ActionInputs {
   const apiKey = core.getInput('api-key', { required: true });
   core.setSecret(apiKey);
 
+  // Optional baseline-path: subpath within the alias to limit baseline screenshots to
+  const baselinePathInput = core.getInput('baseline-path');
+  const baselinePath = baselinePathInput ? baselinePathInput.trim() : undefined;
+
   // Comparison options
   const thresholdInput = core.getInput('threshold') || '0.1';
   const threshold = parseFloat(thresholdInput);
@@ -64,6 +68,7 @@ export function getInputs(): ActionInputs {
     baselineAlias,
     apiUrl,
     apiKey,
+    baselinePath,
     threshold,
     pixelThreshold,
     includeAntiAliasing,

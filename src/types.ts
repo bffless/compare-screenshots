@@ -6,6 +6,9 @@ export interface ActionInputs {
   apiUrl: string;
   apiKey: string;
 
+  // Baseline location
+  baselinePath?: string;
+
   // Comparison
   threshold: number; // 0-100 percentage
   pixelThreshold: number; // 0-1 per-pixel

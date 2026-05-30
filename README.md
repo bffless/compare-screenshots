@@ -32,6 +32,7 @@ This replaces ~50 lines of workflow configuration with a single action.
 | `baseline-alias`        | Yes      | -                                 | BFFLESS alias containing baseline screenshots      |
 | `api-url`               | Yes      | -                                 | BFFLESS API URL                                    |
 | `api-key`               | Yes      | -                                 | BFFLESS API key                                    |
+| `baseline-path`         | No       | -                                 | Subpath within the baseline alias where the screenshots live (e.g. `screenshots`). Use when the alias serves more than just the screenshots at its root. |
 | `threshold`             | No       | `0.1`                             | Percentage diff tolerance (0-100)                  |
 | `pixel-threshold`       | No       | `0.1`                             | Per-pixel color threshold (0-1)                    |
 | `include-anti-aliasing` | No       | `false`                           | Include anti-aliasing differences                  |
@@ -176,6 +177,23 @@ jobs:
           api-url: ${{ vars.ASSET_HOST_URL }}
           api-key: ${{ secrets.ASSET_HOST_KEY }}
 ```
+
+### Sharing an alias with other content
+
+By default the action treats every PNG it downloads from `baseline-alias` as a baseline screenshot (matched by basename). If your alias also hosts other content — a built site, a coverage report, etc. — point the action at the right subpath with `baseline-path`:
+
+```yaml
+- name: Compare screenshots
+  uses: bffless/compare-screenshots@v1
+  with:
+    path: ./screenshots
+    baseline-alias: production
+    baseline-path: screenshots
+    api-url: ${{ vars.ASSET_HOST_URL }}
+    api-key: ${{ secrets.ASSET_HOST_KEY }}
+```
+
+Only files under `<baseline-path>/` in the downloaded baseline are considered, so PNGs elsewhere in the alias (e.g. icons in a coverage HTML report) don't pollute the comparison.
 
 ## How It Works
 
