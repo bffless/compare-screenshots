@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.0](https://github.com/bffless/compare-screenshots/compare/v1.2.0...v1.3.0) (2026-05-30)
+
+
+### Features
+
+* add baseline-path input to scope baseline screenshots ([599f186](https://github.com/bffless/compare-screenshots/commit/599f18641fba664c76efb2e721047d3c9099c86c))
+
 ## [1.2.0](https://github.com/bffless/compare-screenshots/compare/v1.1.1...v1.2.0) (2026-02-21)
 
 
