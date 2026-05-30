@@ -34140,13 +34140,15 @@ async function downloadBaseline(inputs, context) {
     // Create temp directory for baseline
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vrt-baseline-'));
     core.info(`Downloading baseline to: ${tempDir}`);
-    // Request download manifest
-    // The baseline-alias refers to a specific path in BFFLESS
-    // We need to extract just the filename portion for the local path
-    const baselinePath = inputs.path.replace(/^\.\//, '').replace(/\/$/, '');
+    // Resolve the manifest filter path. baseline-path is the user's explicit
+    // pointer at where the baseline lives inside the alias; fall back to the
+    // local path for backwards compatibility.
+    const manifestPath = (inputs.baselinePath ?? inputs.path)
+        .replace(/^\.?\/+/, '')
+        .replace(/\/+$/, '');
     const prepareResponse = await (0, artifact_client_1.requestPrepareBatchDownload)(inputs.apiUrl, inputs.apiKey, {
         repository: inputs.repository,
-        path: baselinePath,
+        path: manifestPath,
         alias: inputs.baselineAlias,
     });
     if (prepareResponse.files.length === 0) {
@@ -34158,6 +34160,19 @@ async function downloadBaseline(inputs, context) {
             fileCount: 0,
             files: [],
         };
+    }
+    // When baseline-path is provided and the server filtered on it as a
+    // directory, returned paths have the prefix stripped (e.g. "home.png"
+    // instead of "screenshots/home.png"). The download endpoint needs the
+    // full storage key, so put the prefix back when it's missing.
+    if (inputs.baselinePath) {
+        const prefix = manifestPath ? manifestPath + '/' : '';
+        if (prefix) {
+            prepareResponse.files = prepareResponse.files.map((f) => {
+                const normalized = f.path.replace(/\\/g, '/');
+                return normalized.startsWith(prefix) ? f : { ...f, path: prefix + normalized };
+            });
+        }
     }
     core.info(`Found ${prepareResponse.files.length} baseline files`);
     core.info(`Baseline commit SHA: ${prepareResponse.commitSha}`);
