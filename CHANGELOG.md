@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.2](https://github.com/bffless/compare-screenshots/compare/v1.3.1...v1.3.2) (2026-05-30)
+
+
+### Bug Fixes
+
+* fall back to ZIP upload when presigned URLs aren't supported ([8229429](https://github.com/bffless/compare-screenshots/commit/82294294cb845f59594fd0b48fac545065abfb00))
+
 ## [1.3.1](https://github.com/bffless/compare-screenshots/compare/v1.3.0...v1.3.1) (2026-05-30)
 
 
