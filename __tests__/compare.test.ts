@@ -158,7 +158,7 @@ describe('compareScreenshots', () => {
     expect(report.results[0].name).toBe('missing.png');
   });
 
-  it('should handle size mismatch as 100% diff', async () => {
+  it('should surface dimensions on size mismatch instead of producing a magenta diff', async () => {
     // Create images with different sizes
     const small = createSolidPng(50, 50, 255, 0, 0);
     const large = createSolidPng(100, 100, 255, 0, 0);
@@ -172,8 +172,19 @@ describe('compareScreenshots', () => {
     const report = await compareScreenshots(inputs, baseline, context);
 
     expect(report.summary.failed).toBe(1);
-    expect(report.results[0].status).toBe('fail');
-    expect(report.results[0].diffPercentage).toBe(100);
+    const [result] = report.results;
+    expect(result.status).toBe('fail');
+    // No pixelmatch comparison happened — no percentage, no diff image written
+    expect(result.diffPercentage).toBeUndefined();
+    expect(result.diffPath).toBeUndefined();
+    expect(result.sizeMismatch).toEqual({
+      baselineWidth: 50,
+      baselineHeight: 50,
+      currentWidth: 100,
+      currentHeight: 100,
+    });
+    // The old behavior wrote a magenta PNG to the diff path; verify it's gone
+    expect(fs.existsSync(path.join(outputDir, 'diff-size-diff.png'))).toBe(false);
   });
 
   it('should respect threshold for passing', async () => {

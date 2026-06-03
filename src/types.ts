@@ -50,6 +50,16 @@ export interface ComparisonResult {
   diffPath?: string;
   baselinePath?: string;
   currentPath?: string;
+  // Set when baseline and current dimensions differ. When present, no
+  // diff image is generated and `diffPercentage` is left undefined —
+  // pixelmatch can't meaningfully compare different-sized images, so the
+  // report surfaces the dimensions rather than a misleading 100% diff.
+  sizeMismatch?: {
+    baselineWidth: number;
+    baselineHeight: number;
+    currentWidth: number;
+    currentHeight: number;
+  };
 }
 
 export interface ComparisonSummary {

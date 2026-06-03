@@ -79,9 +79,15 @@ export async function postPRComment(
           : result.status === 'new'
             ? '🆕'
             : '⚠️';
-    const diffPct =
-      result.diffPercentage !== undefined ? `${result.diffPercentage.toFixed(3)}%` : '—';
-    body += `| \`${result.name}\` | ${statusEmoji} | ${diffPct} |\n`;
+    let diffCell: string;
+    if (result.sizeMismatch) {
+      diffCell = 'size mismatch';
+    } else if (result.diffPercentage !== undefined) {
+      diffCell = `${result.diffPercentage.toFixed(3)}%`;
+    } else {
+      diffCell = '—';
+    }
+    body += `| \`${result.name}\` | ${statusEmoji} | ${diffCell} |\n`;
   }
 
   // Add collapsible sections for failures with side-by-side comparison
@@ -95,37 +101,47 @@ export async function postPRComment(
     const screenshotsPath = inputs.path.replace(/^\.\//, '').replace(/\/$/, '');
     const diffsPath = inputs.outputDir.replace(/^\.\//, '').replace(/\/$/, '');
 
-    if (showImages) {
-      // Public: embed images directly using commit SHA URLs (stable links)
-      for (const failure of failures) {
-        const prodUrl = `${apiUrl}/public/${owner}/${repo}/commits/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`;
-        const prUrl = `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${screenshotsPath}/${failure.name}`;
-        const diffUrl = `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${diffsPath}/diff-${failure.name}`;
+    for (const failure of failures) {
+      const prodUrl = showImages
+        ? `${apiUrl}/public/${owner}/${repo}/commits/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`
+        : `${apiUrl}/repo/${owner}/${repo}/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`;
+      const prUrl = showImages
+        ? `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${screenshotsPath}/${failure.name}`
+        : `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${screenshotsPath}/${failure.name}`;
+      const diffUrl = showImages
+        ? `${apiUrl}/public/${owner}/${repo}/commits/${context.commitSha}/${diffsPath}/diff-${failure.name}`
+        : `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${diffsPath}/diff-${failure.name}`;
 
-        body += `<details>\n`;
-        body += `<summary><strong>${failure.name}</strong> &nbsp;—&nbsp; ${failure.diffPercentage?.toFixed(3)}% diff</summary>\n\n`;
-        body += `| Baseline | Current | Diff |\n`;
-        body += `|:--------:|:-------:|:----:|\n`;
-        body += `| <img src="${prodUrl}" width="250" /> | <img src="${prUrl}" width="250" /> | <img src="${diffUrl}" width="250" /> |\n\n`;
-        body += `</details>\n\n`;
-      }
-    } else {
-      // Private: show links instead of embedded images
-      for (const failure of failures) {
-        const prodUrl = `${apiUrl}/repo/${owner}/${repo}/${report.baselineCommitSha}/${screenshotsPath}/${failure.name}`;
-        const prUrl = `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${screenshotsPath}/${failure.name}`;
-        const diffUrl = `${apiUrl}/repo/${owner}/${repo}/${context.commitSha}/${diffsPath}/diff-${failure.name}`;
+      const sm = failure.sizeMismatch;
+      const summaryText = sm
+        ? `size mismatch (${sm.baselineWidth}×${sm.baselineHeight} → ${sm.currentWidth}×${sm.currentHeight})`
+        : `${failure.diffPercentage?.toFixed(3)}% diff`;
 
-        body += `<details>\n`;
-        body += `<summary><strong>${failure.name}</strong> &nbsp;—&nbsp; ${failure.diffPercentage?.toFixed(3)}% diff</summary>\n\n`;
+      body += `<details>\n`;
+      body += `<summary><strong>${failure.name}</strong> &nbsp;—&nbsp; ${summaryText}</summary>\n\n`;
+
+      if (showImages) {
+        if (sm) {
+          // No diff image — pixelmatch can't compare different-sized images.
+          body += `| Baseline (${sm.baselineWidth}×${sm.baselineHeight}) | Current (${sm.currentWidth}×${sm.currentHeight}) |\n`;
+          body += `|:--------:|:-------:|\n`;
+          body += `| <img src="${prodUrl}" width="250" /> | <img src="${prUrl}" width="250" /> |\n\n`;
+        } else {
+          body += `| Baseline | Current | Diff |\n`;
+          body += `|:--------:|:-------:|:----:|\n`;
+          body += `| <img src="${prodUrl}" width="250" /> | <img src="${prUrl}" width="250" /> | <img src="${diffUrl}" width="250" /> |\n\n`;
+        }
+      } else {
         body += `| | Link |\n`;
         body += `|:--|:--|\n`;
-        body += `| Baseline | [View](${prodUrl}) |\n`;
-        body += `| Current | [View](${prUrl}) |\n`;
-        body += `| Diff | [View](${diffUrl}) |\n\n`;
+        body += `| Baseline${sm ? ` (${sm.baselineWidth}×${sm.baselineHeight})` : ''} | [View](${prodUrl}) |\n`;
+        body += `| Current${sm ? ` (${sm.currentWidth}×${sm.currentHeight})` : ''} | [View](${prUrl}) |\n`;
+        if (!sm) body += `| Diff | [View](${diffUrl}) |\n`;
+        body += `\n`;
         body += `> 🔒 Requires login to view\n\n`;
-        body += `</details>\n\n`;
       }
+
+      body += `</details>\n\n`;
     }
   }
 
