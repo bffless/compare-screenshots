@@ -73,13 +73,21 @@ export async function compareScreenshots(
       const diffPath = path.join(outputDir, `diff-${screenshot}`);
       const comparison = compareImages(baselinePath, localPath, diffPath, inputs);
 
+      const passed =
+        !comparison.sizeMismatch &&
+        comparison.diffPercentage !== undefined &&
+        comparison.diffPercentage <= inputs.threshold;
+
       results.push({
         name: screenshot,
-        status: comparison.diffPercentage <= inputs.threshold ? 'pass' : 'fail',
+        status: passed ? 'pass' : 'fail',
         ...comparison,
         baselinePath,
         currentPath: localPath,
-        diffPath: comparison.diffPercentage > 0 ? diffPath : undefined,
+        diffPath:
+          comparison.diffPercentage !== undefined && comparison.diffPercentage > 0
+            ? diffPath
+            : undefined,
       });
     }
   }
@@ -113,33 +121,28 @@ function compareImages(
   currentPath: string,
   diffPath: string,
   inputs: ActionInputs
-): { diffPixels: number; totalPixels: number; diffPercentage: number } {
+): {
+  diffPixels?: number;
+  totalPixels?: number;
+  diffPercentage?: number;
+  sizeMismatch?: ComparisonResult['sizeMismatch'];
+} {
   const baseline = PNG.sync.read(fs.readFileSync(baselinePath));
   const current = PNG.sync.read(fs.readFileSync(currentPath));
 
-  // Handle size mismatch
+  // pixelmatch requires identical dimensions. Rather than synthesise a
+  // misleading diff image (the old behavior filled the whole canvas with
+  // magenta and reported 100%), surface the dimensions so the report can
+  // explain the failure honestly.
   if (baseline.width !== current.width || baseline.height !== current.height) {
-    const totalPixels = Math.max(baseline.width * baseline.height, current.width * current.height);
-
-    // Create a diff image showing the size difference
-    const maxWidth = Math.max(baseline.width, current.width);
-    const maxHeight = Math.max(baseline.height, current.height);
-    const diff = new PNG({ width: maxWidth, height: maxHeight });
-
-    // Fill with magenta to indicate size mismatch
-    for (let y = 0; y < maxHeight; y++) {
-      for (let x = 0; x < maxWidth; x++) {
-        const idx = (y * maxWidth + x) * 4;
-        diff.data[idx] = 255; // R
-        diff.data[idx + 1] = 0; // G
-        diff.data[idx + 2] = 255; // B
-        diff.data[idx + 3] = 255; // A
-      }
-    }
-
-    fs.writeFileSync(diffPath, PNG.sync.write(diff));
-
-    return { diffPixels: totalPixels, totalPixels, diffPercentage: 100 };
+    return {
+      sizeMismatch: {
+        baselineWidth: baseline.width,
+        baselineHeight: baseline.height,
+        currentWidth: current.width,
+        currentHeight: current.height,
+      },
+    };
   }
 
   const { width, height } = baseline;

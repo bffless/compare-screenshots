@@ -32,6 +32,12 @@ export interface ComparisonResult {
     diffPath?: string;
     baselinePath?: string;
     currentPath?: string;
+    sizeMismatch?: {
+        baselineWidth: number;
+        baselineHeight: number;
+        currentWidth: number;
+        currentHeight: number;
+    };
 }
 export interface ComparisonSummary {
     total: number;
