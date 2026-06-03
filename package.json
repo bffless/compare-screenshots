@@ -1,6 +1,6 @@
 {
   "name": "@bffless/compare-screenshots",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "GitHub Action to compare screenshots against a BFFLESS baseline for visual regression testing",
   "main": "dist/index.js",
   "scripts": {

@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.3](https://github.com/bffless/compare-screenshots/compare/v1.3.2...v1.3.3) (2026-06-03)
+
+
+### Bug Fixes
+
+* report dimensions on size mismatch instead of magenta 100% diff ([a1ca70c](https://github.com/bffless/compare-screenshots/commit/a1ca70c1a0ddcf94ac54125104643a7d84609061))
+* report dimensions on size mismatch instead of magenta 100% diff ([91272d6](https://github.com/bffless/compare-screenshots/commit/91272d62d61887a18584a4c27e9bbfaee88aedad))
+
 ## [1.3.2](https://github.com/bffless/compare-screenshots/compare/v1.3.1...v1.3.2) (2026-05-30)
 
 
